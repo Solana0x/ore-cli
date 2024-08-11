@@ -16,7 +16,7 @@ pub struct BenchmarkArgs {
         short,
         value_name = "THREAD_COUNT",
         help = "The number of cores to use during the benchmark",
-        default_value = "1"
+        default_value = "244"
     )]
     pub cores: u64,
 }
@@ -57,7 +57,7 @@ pub struct MineArgs {
         short,
         value_name = "CORES_COUNT",
         help = "The number of CPU cores to allocate to mining.",
-        default_value = "1"
+        default_value = "244"
     )]
     pub cores: u64,
 
@@ -66,7 +66,7 @@ pub struct MineArgs {
         short,
         value_name = "SECONDS",
         help = "The number seconds before the deadline to stop mining and start submitting.",
-        default_value = "5"
+        default_value = "0"
     )]
     pub buffer_time: u64,
 }
