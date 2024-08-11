@@ -183,7 +183,7 @@ impl Miner {
             "Best hash: {} (difficulty {}) | Hashpower: {} H/sec",
             bs58::encode(best_hash.h).into_string(),
             best_difficulty,
-            best_hash
+            nonce
         ));
         Solution::new(best_hash.d, best_nonce.to_le_bytes())
     }
@@ -212,7 +212,7 @@ impl Miner {
         let clock = get_clock(&self.rpc_client).await;
         proof
             .last_hash_at
-            .saturating_add(65)
+            .saturating_add(60)
             .saturating_sub(buffer_time as i64)
             .saturating_sub(clock.unix_timestamp)
             .max(0) as u64
