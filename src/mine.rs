@@ -200,7 +200,6 @@ impl Miner {
             bs58::encode(best_hash.h).into_string(),
             best_difficulty
         ));
-
         Solution::new(best_hash.d, best_nonce.to_le_bytes())
     }
 
@@ -220,7 +219,7 @@ impl Miner {
         config
             .last_reset_at
             .saturating_add(EPOCH_DURATION)
-            .saturating_sub(5) // Buffer
+            .saturating_sub(0) // Buffer
             .le(&clock.unix_timestamp)
     }
 
@@ -228,7 +227,7 @@ impl Miner {
         let clock = get_clock(&self.rpc_client).await;
         proof
             .last_hash_at
-            .saturating_add(60)
+            .saturating_add(90)
             .saturating_sub(buffer_time as i64)
             .saturating_sub(clock.unix_timestamp)
             .max(0) as u64
