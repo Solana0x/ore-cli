@@ -1,10 +1,4 @@
-use std::{
-    sync::Arc, 
-    sync::RwLock, 
-    time::Instant, 
-    thread, 
-    sync::mpsc
-};
+use std::{sync::Arc, sync::RwLock, time::Instant, thread};
 use colored::*;
 use drillx::{self, equix::SolverMemory, Hash, Solution};
 use ore_api::{
@@ -12,7 +6,6 @@ use ore_api::{
     state::{Bus, Config, Proof},
 };
 use ore_utils::AccountDeserialize;
-use rand::Rng;
 use solana_program::pubkey::Pubkey;
 use solana_rpc_client::spinner;
 use solana_sdk::signer::Signer;
@@ -48,7 +41,7 @@ impl Miner {
             println!(
                 "\n\nStake: {} ORE\n{}  Multiplier: {:12}x",
                 amount_u64_to_string(proof.balance),
-                if last_hash_at.gt(&0) {
+                if last_hash_at > 0 {
                     format!(
                         "  Change: {} ORE\n",
                         amount_u64_to_string(proof.balance.saturating_sub(last_balance))
@@ -72,7 +65,7 @@ impl Miner {
             // Build instruction set
             let mut ixs = vec![ore_api::instruction::auth(proof_pubkey(signer.pubkey()))];
             let mut compute_budget = 500_000;
-            if self.should_reset(config).await && rand::thread_rng().gen_range(0..100).eq(&0) {
+            if self.should_reset(config).await && rand::random::<u8>() == 0 {
                 compute_budget += 100_000;
                 ixs.push(ore_api::instruction::reset(signer.pubkey()));
             }
@@ -98,30 +91,30 @@ impl Miner {
         cores: u64,
         min_difficulty: u32,
     ) -> Solution {
-        // Dispatch job to each thread
+        // Create a progress bar to monitor progress
         let progress_bar = Arc::new(spinner::new_progress_bar());
         let global_best_difficulty = Arc::new(RwLock::new(0u32));
         progress_bar.set_message("Mining...");
 
+        // Get core affinity information
         let core_ids = core_affinity::get_core_ids().unwrap();
         let total_cores = core_ids.len() as u64;
         let cores_to_use = cores.min(total_cores);
 
-        let (tx, rx) = mpsc::channel();
-        let thread_handles: Vec<_> = core_ids
+        // Create threads for each core
+        let handles: Vec<_> = core_ids
             .into_iter()
             .take(cores_to_use as usize)
             .map(|i| {
-                let tx = tx.clone();
-                let proof = proof.clone();
                 let global_best_difficulty = Arc::clone(&global_best_difficulty);
+                let proof = proof.clone();
                 let progress_bar = progress_bar.clone();
 
                 thread::spawn(move || {
-                    // Pin thread to specific core
+                    // Pin thread to a specific core
                     core_affinity::set_for_current(i);
 
-                    // Start hashing
+                    // Start hashing loop
                     let timer = Instant::now();
                     let mut nonce =
                         u64::MAX.saturating_div(cores_to_use).saturating_mul(i.id as u64);
@@ -131,6 +124,7 @@ impl Miner {
 
                     let mut memory = SolverMemory::new();
 
+                    // Perform continuous hashing
                     loop {
                         if let Ok(hx) = drillx::hash(&proof.challenge, &nonce.to_le_bytes()) {
                             let difficulty = hx.difficulty();
@@ -139,6 +133,7 @@ impl Miner {
                                 best_difficulty = difficulty;
                                 best_hash = hx;
 
+                                // Update global best difficulty
                                 let mut global_best = global_best_difficulty.write().unwrap();
                                 if best_difficulty > *global_best {
                                     *global_best = best_difficulty;
@@ -152,38 +147,33 @@ impl Miner {
                         }
 
                         // Increment nonce
-                        nonce += 1;
+                        nonce = nonce.wrapping_add(1);
                     }
 
-                    tx.send((best_nonce, best_difficulty, best_hash)).expect("Failed to send result");
+                    // Return the best nonce found
+                    (best_nonce, best_difficulty, best_hash)
                 })
             })
             .collect();
 
+        // Aggregate results from all threads
         let mut best_nonce = 0;
         let mut best_difficulty = 0;
         let mut best_hash = Hash::default();
-
-        for _ in 0..cores_to_use {
-            if let Ok((nonce, difficulty, hash)) = rx.recv() {
-                if difficulty > best_difficulty {
-                    best_difficulty = difficulty;
-                    best_nonce = nonce;
-                    best_hash = hash;
-                }
+        for handle in handles {
+            let (nonce, difficulty, hash) = handle.join().expect("Thread panicked");
+            if difficulty > best_difficulty {
+                best_difficulty = difficulty;
+                best_nonce = nonce;
+                best_hash = hash;
             }
         }
 
-        for handle in thread_handles {
-            handle.join().expect("Thread panicked");
-        }
-
-        // Update log
+        // Update progress bar with the best result
         progress_bar.finish_with_message(format!(
-            "Best hash: {} (difficulty {}) | Hashpower: {} H/sec",
+            "Best hash: {} (difficulty {})",
             bs58::encode(best_hash.h).into_string(),
-            best_difficulty,
-            nonce
+            best_difficulty
         ));
         Solution::new(best_hash.d, best_nonce.to_le_bytes())
     }
