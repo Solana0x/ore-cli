@@ -180,9 +180,10 @@ impl Miner {
 
         // Update log
         progress_bar.finish_with_message(format!(
-            "Best hash: {} (difficulty {})",
+            "Best hash: {} (difficulty {}) | Hashpower: {} H/sec",
             bs58::encode(best_hash.h).into_string(),
-            best_difficulty
+            best_difficulty,
+            best_hash
         ));
         Solution::new(best_hash.d, best_nonce.to_le_bytes())
     }
