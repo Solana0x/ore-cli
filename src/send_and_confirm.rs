@@ -27,14 +27,14 @@ use solana_transaction_status::{TransactionConfirmationStatus, UiTransactionEnco
 use crate::utils::get_latest_blockhash_with_retries;
 use crate::Miner;
 
-const MIN_SOL_BALANCE: f64 = 0.005;
+const MIN_SOL_BALANCE: f64 = 0.0005;
 
 const RPC_RETRIES: usize = 0;
 const _SIMULATION_RETRIES: usize = 4;
 const GATEWAY_RETRIES: usize = 150;
-const CONFIRM_RETRIES: usize = 8;
+const CONFIRM_RETRIES: usize = 80;
 
-const CONFIRM_DELAY: u64 = 500;
+const CONFIRM_DELAY: u64 = 5;
 const GATEWAY_DELAY: u64 = 0;
 
 pub enum ComputeBudget {
