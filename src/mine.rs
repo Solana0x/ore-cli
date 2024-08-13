@@ -183,8 +183,10 @@ impl Miner {
 
         // Update log with total nonces
         progress_bar.finish_with_message(format!(
-            "Hashpower: {} H/sec",
-            total_nonces // directly use total_nonces here
+            "Best Diff : {} |  Hashpower: {}/60 H/sec | total nounces: {} ",
+            best_difficulty,
+            total_nonces,
+            total_nonces
         ));
 
         Solution::new(best_hash.d, best_nonce.to_le_bytes())
