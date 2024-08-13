@@ -22,6 +22,7 @@ use crate::{
     },
     Miner,
 };
+
 impl Miner {
     pub async fn mine(&self, args: MineArgs) {
         let signer = self.signer();
@@ -85,6 +86,7 @@ impl Miner {
         let global_best_difficulty = Arc::new(RwLock::new(0u32));
         progress_bar.set_message("Mining...");
         let core_ids = core_affinity::get_core_ids().unwrap();
+        let mut total_nonces = 0;
         let handles: Vec<_> = core_ids
             .into_iter()
             .map(|i| {
@@ -120,12 +122,10 @@ impl Miner {
                                     best_nonce = nonce;
                                     best_difficulty = difficulty;
                                     best_hash = hx;
-                                    // {{ edit_1 }}
                                     if best_difficulty.gt(&*global_best_difficulty.read().unwrap())
                                     {
                                         *global_best_difficulty.write().unwrap() = best_difficulty;
                                     }
-                                    // {{ edit_1 }}
                                 }
                             }
 
@@ -166,11 +166,13 @@ impl Miner {
                 })
             })
             .collect();
+
         let mut best_nonce = 0;
         let mut best_difficulty = 0;
         let mut best_hash = Hash::default();
         for h in handles {
             if let Ok((nonce, difficulty, hash)) = h.join() {
+                total_nonces += nonce; // Accumulate the total nonces
                 if difficulty > best_difficulty {
                     best_difficulty = difficulty;
                     best_nonce = nonce;
@@ -178,12 +180,16 @@ impl Miner {
                 }
             }
         }
+
+        // Update log with total nonces
         progress_bar.finish_with_message(format!(
-            "Best Diff {}",
-            best_difficulty
+            "Hashpower: {} H/sec",
+            total_nonces // directly use total_nonces here
         ));
+
         Solution::new(best_hash.d, best_nonce.to_le_bytes())
     }
+
     pub fn check_num_cores(&self, cores: u64) {
         let num_cores = num_cpus::get() as u64;
         if cores.gt(&num_cores) {
@@ -194,6 +200,7 @@ impl Miner {
             );
         }
     }
+
     async fn should_reset(&self, config: Config) -> bool {
         let clock = get_clock(&self.rpc_client).await;
         config
@@ -236,6 +243,7 @@ impl Miner {
         BUS_ADDRESSES[i]
     }
 }
+
 fn calculate_multiplier(balance: u64, top_balance: u64) -> f64 {
     1.0 + (balance as f64 / top_balance as f64).min(1.0f64)
 }
