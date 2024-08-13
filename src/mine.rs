@@ -124,7 +124,8 @@ impl Miner {
                         let mut best_hash = Hash::default();
                         loop {
                             // Create hash
-                            if let Ok(hx) = drillx::hash(
+                            if let Ok(hx) = drillx::hash_with_memory(
+                                &mut memory,
                                 &proof.challenge,
                                 &nonce.to_le_bytes(),
                             ) {
