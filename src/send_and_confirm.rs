@@ -27,14 +27,14 @@ use solana_transaction_status::{TransactionConfirmationStatus, UiTransactionEnco
 use crate::utils::get_latest_blockhash_with_retries;
 use crate::Miner;
 
-const MIN_SOL_BALANCE: f64 = 0.0005;
+const MIN_SOL_BALANCE: f64 = 0.005;
 
 const RPC_RETRIES: usize = 0;
 const _SIMULATION_RETRIES: usize = 4;
 const GATEWAY_RETRIES: usize = 150;
-const CONFIRM_RETRIES: usize = 80;
+const CONFIRM_RETRIES: usize = 8;
 
-const CONFIRM_DELAY: u64 = 5;
+const CONFIRM_DELAY: u64 = 500;
 const GATEWAY_DELAY: u64 = 0;
 
 pub enum ComputeBudget {
@@ -174,7 +174,7 @@ impl Miner {
 
                     // Confirm transaction
                     'confirm: for _ in 0..CONFIRM_RETRIES {
-                        std::thread::sleep(Duration::from_millis(CONFIRM_DELAY));
+                        tokio::time::sleep(Duration::from_millis(CONFIRM_DELAY)).await;
                         match client.get_signature_statuses(&[sig]).await {
                             Ok(signature_statuses) => {
                                 for status in signature_statuses.value {
@@ -264,7 +264,7 @@ impl Miner {
             }
 
             // Retry
-            std::thread::sleep(Duration::from_millis(GATEWAY_DELAY));
+            tokio::time::sleep(Duration::from_millis(GATEWAY_DELAY)).await;
             if attempts > GATEWAY_RETRIES {
                 log_error(&progress_bar, "Max retries", true);
                 return Err(ClientError {
