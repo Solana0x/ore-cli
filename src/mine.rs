@@ -184,18 +184,6 @@ impl Miner {
         ));
         Solution::new(best_hash.d, best_nonce.to_le_bytes())
     }
-
-    pub fn check_num_cores(&self, cores: u64) {
-        let num_cores = num_cpus::get() as u64;
-        if cores.gt(&num_cores) {
-            println!(
-                "{} Cannot exceeds available cores ({})",
-                "WARNING".bold().yellow(),
-                num_cores
-            );
-        }
-    }
-
     async fn should_reset(&self, config: Config) -> bool {
         let clock = get_clock(&self.rpc_client).await;
         config
