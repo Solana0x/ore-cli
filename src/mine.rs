@@ -166,8 +166,6 @@ impl Miner {
                 })
             })
             .collect();
-
-        // Join handles and return best nonce
         let mut best_nonce = 0;
         let mut best_difficulty = 0;
         let mut best_hash = Hash::default();
@@ -180,14 +178,10 @@ impl Miner {
                 }
             }
         }
-
-        // Update log
         progress_bar.finish_with_message(format!(
-            "Best hash: {} (difficulty {})",
-            bs58::encode(best_hash.h).into_string(),
+            "Best Diff {}",
             best_difficulty
         ));
-
         Solution::new(best_hash.d, best_nonce.to_le_bytes())
     }
 
@@ -244,7 +238,6 @@ impl Miner {
         BUS_ADDRESSES[i]
     }
 }
-
 fn calculate_multiplier(balance: u64, top_balance: u64) -> f64 {
     1.0 + (balance as f64 / top_balance as f64).min(1.0f64)
 }
