@@ -77,4 +77,16 @@ impl Miner {
             total_nonces.saturating_div(TEST_DURATION as u64),
         ));
     }
+
+    // Define the missing method
+    fn check_num_cores(&self, cores: u64) {
+        if cores == 0 {
+            panic!("Number of cores must be greater than 0");
+        }
+        let available_cores = num_cpus::get();
+        if cores > available_cores as u64 {
+            panic!("Requested number of cores exceeds available cores");
+        }
+        println!("Using {} cores out of {}", cores, available_cores);
+    }
 }
