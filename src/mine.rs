@@ -22,27 +22,20 @@ use crate::{
     },
     Miner,
 };
-
 impl Miner {
     pub async fn mine(&self, args: MineArgs) {
-        // Open account, if needed.
         let signer = self.signer();
         self.open().await;
-
-        // Check num threads
         self.check_num_cores(args.cores);
-
-        // Start mining loop
         let mut last_hash_at = 0;
         let mut last_balance = 0;
         loop {
-            // Fetch proof
             let config = get_config(&self.rpc_client).await;
             let proof =
                 get_updated_proof_with_authority(&self.rpc_client, signer.pubkey(), last_hash_at)
                     .await;
             println!(
-                "\n\nStake: {} ORE\n{}  Multiplier: {:12}x",
+                "\n Stake: {} ORE\n{}  Multiplier: {:12}x",
                 amount_u64_to_string(proof.balance),
                 if last_hash_at.gt(&0) {
                     format!(
@@ -56,15 +49,10 @@ impl Miner {
             );
             last_hash_at = proof.last_hash_at;
             last_balance = proof.balance;
-
-            // Calculate cutoff time
             let cutoff_time = self.get_cutoff(proof, args.buffer_time).await;
-
-            // Run drillx
             let solution =
                 Self::find_hash_par(proof, cutoff_time, args.cores, config.min_difficulty as u32)
                     .await;
-
             // Build instruction set
             let mut ixs = vec![ore_api::instruction::auth(proof_pubkey(signer.pubkey()))];
             let mut compute_budget = 500_000;
@@ -72,7 +60,6 @@ impl Miner {
                 compute_budget += 100_000;
                 ixs.push(ore_api::instruction::reset(signer.pubkey()));
             }
-
             // Build mine ix
             ixs.push(ore_api::instruction::mine(
                 signer.pubkey(),
@@ -80,7 +67,6 @@ impl Miner {
                 self.find_bus().await,
                 solution,
             ));
-
             // Submit transaction
             self.send_and_confirm(&ixs, ComputeBudget::Fixed(compute_budget), false)
                 .await
